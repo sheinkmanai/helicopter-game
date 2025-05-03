@@ -3,7 +3,7 @@ import { Helicopter } from '../actors/Helicopter';
 import { Platform } from '../actors/Platform';
 import { StartPlatform } from '../actors/StartPlatform';
 import { Food } from '../actors/Food';
-import { Enemy } from '../actors/Enemy';
+import { Enemy, EnemyType } from '../actors/Enemy';
 import { GameOverScene } from './GameOverScene';
 import { StageCompleteScene } from './StageCompleteScene';
 
@@ -247,24 +247,23 @@ export class GameScene extends Scene {
     }
 
     private spawnEnemies() {
-        // Spawn some flying enemies
-        for (let i = 0; i < 3; i++) {
-            const enemy = new Enemy(
-                Math.random() * 800,
-                Math.random() * 400,
-                'flying'
-            );
-            this.add(enemy);
-            this.enemies.push(enemy);
-        }
-
-        // Spawn some walking enemies on platforms
+        // Spawn walking enemies on platforms
         this.platforms.forEach(platform => {
-            if (Math.random() < 0.3) { // 30% chance to spawn enemy on each platform
+            // Skip the start platform
+            if (platform === this.startPlatform) return;
+
+            // 50% chance to spawn an enemy on each platform
+            if (Math.random() < 0.5) {
+                // Randomly select enemy type
+                const types = [EnemyType.SLOW, EnemyType.MEDIUM, EnemyType.FAST, EnemyType.SPEEDY];
+                const type = types[Math.floor(Math.random() * types.length)];
+                
+                // Spawn the enemy slightly above the platform
                 const enemy = new Enemy(
                     platform.pos.x,
-                    platform.pos.y - 30,
-                    'walking'
+                    platform.pos.y - platform.height/2 - 10, // Position above platform
+                    platform,
+                    type
                 );
                 this.add(enemy);
                 this.enemies.push(enemy);
