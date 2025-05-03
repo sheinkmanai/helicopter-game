@@ -1,18 +1,22 @@
 import { Scene, Actor, Color, Vector, Input, Engine, Physics, CollisionType, Label, Font, FontUnit } from 'excalibur';
 import { Helicopter } from '../actors/Helicopter';
 import { Platform } from '../actors/Platform';
+import { StartPlatform } from '../actors/StartPlatform';
 import { Food } from '../actors/Food';
 import { Enemy } from '../actors/Enemy';
 import { GameOverScene } from './GameOverScene';
+import { StageCompleteScene } from './StageCompleteScene';
 
 export class GameScene extends Scene {
     private helicopter!: Helicopter;
     private platforms: Platform[] = [];
+    private startPlatform!: StartPlatform;
     private foods: Food[] = [];
     private enemies: Enemy[] = [];
     private scoreLabel!: Label;
     private healthLabel!: Label;
     private isGameOver: boolean = false;
+    private isStageComplete: boolean = false;
 
     constructor() {
         super();
@@ -51,12 +55,13 @@ export class GameScene extends Scene {
         this.healthLabel.pos.y = 30;
         this.add(this.healthLabel);
 
-        // Create helicopter
-        this.helicopter = new Helicopter(400, 300);
-        this.add(this.helicopter);
-
         // Create platforms
         this.createPlatforms();
+
+        // Create helicopter at the start platform marker
+        const startPos = this.startPlatform.getMarkerPosition();
+        this.helicopter = new Helicopter(startPos.x, startPos.y - 20); // Position slightly above the marker
+        this.add(this.helicopter);
 
         // Create initial food items
         this.spawnFood();
@@ -143,21 +148,51 @@ export class GameScene extends Scene {
     }
 
     private createPlatforms() {
+        // Create start platform
+        this.startPlatform = new StartPlatform(100, 500, 200, 20);
+        this.add(this.startPlatform);
+        this.platforms.push(this.startPlatform);
+
         // Create ground platform
         const ground = new Platform(400, 550, 800, 20);
         this.add(ground);
         this.platforms.push(ground);
 
-        // Create some elevated platforms
-        const platform1 = new Platform(200, 400, 200, 20);
-        const platform2 = new Platform(600, 300, 200, 20);
-        const platform3 = new Platform(400, 200, 200, 20);
+        // Generate random number of platforms (between 3 and 7)
+        const numPlatforms = Math.floor(Math.random() * 5) + 3;
+        
+        // Create random platforms
+        for (let i = 0; i < numPlatforms; i++) {
+            // Random width between 150 and 250
+            const width = Math.floor(Math.random() * 100) + 150;
+            
+            // Random x position, ensuring it's within screen bounds
+            const x = Math.floor(Math.random() * (800 - width)) + width/2;
+            
+            // Random y position between 150 and 450
+            const y = Math.floor(Math.random() * 300) + 150;
+            
+            // Check if this platform overlaps with any existing platform
+            let overlaps = false;
+            for (const platform of this.platforms) {
+                const horizontalOverlap = Math.abs(x - platform.pos.x) < (width + platform.width) / 2;
+                const verticalOverlap = Math.abs(y - platform.pos.y) < 50; // Minimum vertical spacing
+                if (horizontalOverlap && verticalOverlap) {
+                    overlaps = true;
+                    break;
+                }
+            }
 
-        this.add(platform1);
-        this.add(platform2);
-        this.add(platform3);
-
-        this.platforms.push(platform1, platform2, platform3);
+            // If no overlap, create the platform
+            if (!overlaps) {
+                const platform = new Platform(x, y, width, 20);
+                this.add(platform);
+                this.platforms.push(platform);
+            } else {
+                // If there was an overlap, try again
+                i--;
+            }
+        }
     }
 
     private spawnFood() {
@@ -200,6 +235,17 @@ export class GameScene extends Scene {
         });
     }
 
+    private checkStageComplete() {
+        // Check if all food is collected and helicopter is at home
+        if (this.foods.length === 0 && this.helicopter.isAtHome() && !this.isStageComplete) {
+            console.log('Stage Complete!');
+            this.isStageComplete = true;
+            const stageCompleteScene = new StageCompleteScene(this.helicopter.getScore());
+            this.engine.add('stageComplete', stageCompleteScene);
+            this.engine.goToScene('stageComplete');
+        }
+    }
+
     onPreUpdate(engine: Engine, delta: number) {
         // Update enemy player positions
         this.enemies.forEach(enemy => {
@@ -208,5 +254,8 @@ export class GameScene extends Scene {
 
         // Update health display
         this.updateHealth();
+
+        // Check for stage completion
+        this.checkStageComplete();
     }
 } 

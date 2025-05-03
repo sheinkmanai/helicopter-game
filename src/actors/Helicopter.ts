@@ -7,9 +7,11 @@ export class Helicopter extends Actor {
     private readonly MAX_HEALTH = 100;
     private readonly TOP_DAMAGE = 5;
     private readonly FOOD_SCORE = 5;
+    private readonly HOME_RADIUS = 30; // How close to start position to consider "home"
     private isGrounded: boolean = false;
     private health: number;
     private score: number;
+    private startPosition: Vector;
 
     constructor(x: number, y: number) {
         super({
@@ -23,8 +25,19 @@ export class Helicopter extends Actor {
 
         // Enable physics
         this.body.useGravity = true;
+        this.body.rotation = 0; // Set initial rotation to 0
         this.health = this.MAX_HEALTH;
         this.score = 0;
+        this.startPosition = new Vector(x, y);
+    }
+
+    isAtHome(): boolean {
+        const distance = this.pos.distance(this.startPosition);
+        return distance <= this.HOME_RADIUS;
+    }
+
+    getStartPosition(): Vector {
+        return this.startPosition;
     }
 
     paddle() {
@@ -95,6 +108,10 @@ export class Helicopter extends Actor {
 
         // Reset grounded state at the start of each update
         this.isGrounded = false;
+
+        // Ensure no rotation
+        this.rotation = 0;
+        this.angularVelocity = 0;
     }
 
     onCollisionStart(other: Actor) {
