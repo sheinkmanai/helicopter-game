@@ -1,20 +1,27 @@
 import { Actor, Color, Vector, CollisionType, Physics } from 'excalibur';
 
 export class Helicopter extends Actor {
-    private readonly PADDLE_FORCE = 300;
-    private readonly MAX_SPEED = 400;
-    private readonly HORIZONTAL_SPEED = 200;
+    private readonly PADDLE_FORCE = 100;
+    private readonly MAX_SPEED = 300;
+    private readonly HORIZONTAL_SPEED = 180;
+    private readonly HORIZONTAL_ACCELERATION = 100;
+    private readonly HORIZONTAL_DECELERATION = 50;
     private readonly MAX_HEALTH = 100;
     private readonly TOP_DAMAGE = 5;
     private readonly FOOD_SCORE = 5;
-    private readonly HOME_RADIUS = 30; // How close to start position to consider "home"
+    private readonly HOME_RADIUS = 30;
+    private readonly ACCELERATION = 60;
+    private readonly DECELERATION = 30;
+    private readonly GRAVITY = 20;
+    private readonly AIR_RESISTANCE = 0.985;
     private isGrounded: boolean = false;
     private health: number;
     private score: number;
     private startPosition: Vector;
+    private targetVerticalSpeed: number = 0;
 
     constructor(x: number, y: number) {
-        super({F
+        super({
             x,
             y,
             width: 40,
@@ -52,24 +59,28 @@ export class Helicopter extends Actor {
     }
 
     paddle() {
-        // Apply upward force when paddling
-        this.vel.y = Math.max(this.vel.y - this.PADDLE_FORCE, -this.MAX_SPEED);
+        this.targetVerticalSpeed = -this.MAX_SPEED;
+        this.vel.y = Math.max(this.vel.y - this.ACCELERATION, -this.MAX_SPEED);
     }
 
     moveLeft() {
         if (!this.isGrounded) {
-            this.vel.x = -this.HORIZONTAL_SPEED;
+            this.vel.x = Math.max(this.vel.x - this.HORIZONTAL_ACCELERATION, -this.HORIZONTAL_SPEED);
         }
     }
 
     moveRight() {
         if (!this.isGrounded) {
-            this.vel.x = this.HORIZONTAL_SPEED;
+            this.vel.x = Math.min(this.vel.x + this.HORIZONTAL_ACCELERATION, this.HORIZONTAL_SPEED);
         }
     }
 
     stopHorizontalMovement() {
-        this.vel.x = 0;
+        if (this.vel.x > 0) {
+            this.vel.x = Math.max(0, this.vel.x - this.HORIZONTAL_DECELERATION);
+        } else if (this.vel.x < 0) {
+            this.vel.x = Math.min(0, this.vel.x + this.HORIZONTAL_DECELERATION);
+        }
     }
 
     takeDamage(amount: number) {
@@ -96,31 +107,35 @@ export class Helicopter extends Actor {
     }
 
     onPreUpdate() {
-        // Limit maximum vertical speed
+        if (!this.isGrounded) {
+            this.vel.y = Math.min(this.vel.y + this.GRAVITY, this.MAX_SPEED);
+        }
+
+        this.vel.x *= this.AIR_RESISTANCE;
+        if (!this.isGrounded) {
+            this.vel.y *= this.AIR_RESISTANCE;
+        }
+
         if (Math.abs(this.vel.y) > this.MAX_SPEED) {
             this.vel.y = Math.sign(this.vel.y) * this.MAX_SPEED;
         }
 
-        // Keep helicopter within screen bounds
         if (this.pos.x < 20) {
             this.pos.x = 20;
-            this.vel.x = 0;
+            this.vel.x = Math.min(0, this.vel.x + this.HORIZONTAL_DECELERATION);
         } else if (this.pos.x > 780) {
             this.pos.x = 780;
-            this.vel.x = 0;
+            this.vel.x = Math.max(0, this.vel.x - this.HORIZONTAL_DECELERATION);
         }
 
-        // Check for top screen collision and apply damage
         if (this.pos.y < 20) {
             this.pos.y = 20;
             this.vel.y = 0;
             this.takeDamage(this.TOP_DAMAGE);
         }
 
-        // Reset grounded state at the start of each update
         this.isGrounded = false;
 
-        // Ensure no rotation
         this.rotation = 0;
         this.angularVelocity = 0;
     }

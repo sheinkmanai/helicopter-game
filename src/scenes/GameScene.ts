@@ -165,6 +165,21 @@ export class GameScene extends Scene {
                     this.helicopter.takeDamage(5); // Take damage from top collision
                     this.updateHealth(); // Update health display
                 }
+
+                // Check for hard landing
+                const isLanding = contacts.some((contact: Vector) => {
+                    const contactY = contact.y;
+                    const helicopterBottom = this.helicopter.pos.y + this.helicopter.height/2;
+                    // If contact point is very close to helicopter bottom, it's a landing
+                    return Math.abs(contactY - helicopterBottom) < 5;
+                });
+
+                if (isLanding && this.helicopter.vel.y > 300) { // If landing with high velocity
+                    console.log('Hard landing!');
+                    const damage = Math.floor(this.helicopter.vel.y / 100); // Damage based on velocity
+                    this.helicopter.takeDamage(damage);
+                    this.updateHealth();
+                }
             }
         });
     }
