@@ -145,6 +145,28 @@ export class GameScene extends Scene {
                 this.updateHealth(); // Update health display
             }
         });
+
+        // Helicopter collision with platforms
+        this.helicopter.on('collisionstart', (evt) => {
+            if (evt.other instanceof Platform || evt.other instanceof StartPlatform) {
+                // Get the contact points
+                const contacts = evt.contact.points;
+                
+                // Check if any contact point is on the top of the helicopter
+                const isTopCollision = contacts.some((contact: Vector) => {
+                    const contactY = contact.y;
+                    const helicopterTop = this.helicopter.pos.y - this.helicopter.height/2;
+                    // If contact point is very close to helicopter top, it's a top collision
+                    return Math.abs(contactY - helicopterTop) < 5;
+                });
+
+                if (isTopCollision) {
+                    console.log('Top collision with platform!');
+                    this.helicopter.takeDamage(5); // Take damage from top collision
+                    this.updateHealth(); // Update health display
+                }
+            }
+        });
     }
 
     private createPlatforms() {

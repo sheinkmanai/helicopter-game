@@ -14,17 +14,28 @@ export class Helicopter extends Actor {
     private startPosition: Vector;
 
     constructor(x: number, y: number) {
-        super({
+        super({F
             x,
             y,
             width: 40,
-            height: 40,
+            height: 20,
             color: Color.Red,
             collisionType: CollisionType.Active
         });
 
-        // Enable physics
+        // Add a small marker at the top
+        const topMarker = new Actor({
+            x: 0,
+            y: -this.height / 2,
+            width: 4,
+            height: 4,
+            color: Color.Blue
+        });
+        this.addChild(topMarker);
+
+        // Set up physics
         this.body.useGravity = true;
+        this.body.friction = 0.1;
         this.body.rotation = 0; // Set initial rotation to 0
         this.health = this.MAX_HEALTH;
         this.score = 0;
@@ -66,7 +77,7 @@ export class Helicopter extends Actor {
         // Change color based on health percentage
         const healthPercentage = this.health / this.MAX_HEALTH;
         this.color = new Color(255, healthPercentage * 255, healthPercentage * 255);
-        
+
         if (this.health <= 0) {
             this.kill();
         }
@@ -117,14 +128,20 @@ export class Helicopter extends Actor {
     onCollisionStart(other: Actor) {
         // Check if we're colliding with a platform from above
         if (other.body.collisionType === CollisionType.Fixed) {
-            const bottomOfHelicopter = this.pos.y + this.height / 2;
-            const topOfPlatform = other.pos.y - other.height / 2;
-            
+            const topOfHelicopter = this.pos.y - this.height / 2;
+            const bottomOfPlatform = other.pos.y + other.height / 2;
+
+            // If we're below the platform and moving upward
+            if (topOfHelicopter >= bottomOfPlatform - 5 && this.vel.y < 0) {
+                this.takeDamage(this.TOP_DAMAGE);
+                this.vel.y = 0; // Stop upward movement
+                this.pos.y = bottomOfPlatform + this.height / 2; // Adjust position
+            }
             // If we're above the platform and moving downward
-            if (bottomOfHelicopter <= topOfPlatform + 5 && this.vel.y >= 0) {
+            else if (this.pos.y + this.height / 2 <= other.pos.y - other.height / 2 + 5 && this.vel.y >= 0) {
                 this.isGrounded = true;
                 this.vel.y = 0; // Stop vertical movement
-                this.pos.y = topOfPlatform - this.height / 2; // Adjust position
+                this.pos.y = other.pos.y - other.height / 2 - this.height / 2; // Adjust position
             }
         }
     }
